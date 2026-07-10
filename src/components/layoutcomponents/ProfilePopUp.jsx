@@ -8,10 +8,27 @@ import useAuthStore from "../../store/useAuthStore"; // Zustand 스토어 임포
 
 const ProfilePopUp = ({ isOpen, onClose }) => {
   const [activeModal, setActiveModal] = useState(null);
-  const { member, isAuthenticated, setIsAuthenticated, setMember } = useAuthStore();
+  const { member, isAuthenticated, setIsAuthenticated, setMember } =
+    useAuthStore();
   const navigate = useNavigate();
 
   const closeModal = () => setActiveModal(null);
+
+  const getProfileImage = () => {
+    return (
+      member?.memberProfile ||
+      member?.profileImage ||
+      member?.profileImageUrl ||
+      ""
+    );
+  };
+
+  const getProfileInitial = () => {
+    const name = member?.memberNickname || member?.memberName || "사용자";
+    return name.trim().charAt(0);
+  };
+
+  const profileImage = getProfileImage();
 
   const handleLogout = async () => {
     try {
@@ -35,10 +52,14 @@ const ProfilePopUp = ({ isOpen, onClose }) => {
       <S.SidebarContainer $isOpen={isOpen}>
         <S.ProfileImgWrap>
           {/* 실제 유저 프로필 이미지 연동 */}
-          <img 
-            src={member?.memberProfile || "/assets/images/pinggu.png"} 
-            alt="프로필 이미지" 
-          />
+          {profileImage ? (
+            <img src={profileImage} alt="프로필 이미지" />
+          ) : (
+            <S.ProfileInitialAvatar>
+              {getProfileInitial()}
+            </S.ProfileInitialAvatar>
+          )}
+
           <S.CloseButton onClick={onClose}>
             <img src="/assets/icons/close.svg" alt="닫기 버튼" />
           </S.CloseButton>
@@ -58,7 +79,10 @@ const ProfilePopUp = ({ isOpen, onClose }) => {
                 </S.ProfileUserLevel>
                 <S.ProfileUserXp>XP 0</S.ProfileUserXp>
                 <S.ProfileUserCreateAt>
-                  가입일 : {member?.memberCreateAt ? member.memberCreateAt.split('T')[0] : "날짜 없음"}
+                  가입일 :{" "}
+                  {member?.memberCreateAt
+                    ? member.memberCreateAt.split("T")[0]
+                    : "날짜 없음"}
                 </S.ProfileUserCreateAt>
               </S.ProfileUserInfoContainer>
             </S.ProfileContainer>
@@ -71,9 +95,15 @@ const ProfilePopUp = ({ isOpen, onClose }) => {
 
             <S.ProfileContainer>
               <S.ProfileTitles>내 활동</S.ProfileTitles>
-              <Link to={"/myrecipe"} onClick={onClose}>저장한 레시피</Link>
-              <Link to={"/levelandbadge"} onClick={onClose}>획득한 뱃지</Link>
-              <Link to={"/myposts"} onClick={onClose}>커뮤니티 게시물</Link>
+              <Link to={"/myrecipe"} onClick={onClose}>
+                저장한 레시피
+              </Link>
+              <Link to={"/levelandbadge"} onClick={onClose}>
+                획득한 뱃지
+              </Link>
+              <Link to={"/myposts"} onClick={onClose}>
+                커뮤니티 게시물
+              </Link>
             </S.ProfileContainer>
 
             <S.ProfileContainer>
@@ -85,16 +115,19 @@ const ProfilePopUp = ({ isOpen, onClose }) => {
                 비밀번호 변경
               </S.ChangeButton>
               {/* 로그아웃을 S.ChangeButton 스타일로 통일 */}
-              <S.ChangeButton onClick={handleLogout}>
-                로그아웃
-              </S.ChangeButton>
+              <S.ChangeButton onClick={handleLogout}>로그아웃</S.ChangeButton>
             </S.ProfileContainer>
             <div>회원탈퇴</div>
           </>
         ) : (
           <S.ProfileContainer>
             <p>로그인이 필요한 서비스입니다.</p>
-            <S.ChangeButton onClick={() => { navigate("/login"); onClose(); }}>
+            <S.ChangeButton
+              onClick={() => {
+                navigate("/login");
+                onClose();
+              }}
+            >
               로그인 하러 가기
             </S.ChangeButton>
           </S.ProfileContainer>
@@ -102,8 +135,12 @@ const ProfilePopUp = ({ isOpen, onClose }) => {
 
         {activeModal && (
           <ChangeInfoFrame onClose={closeModal}>
-            {activeModal === "nickname" && <NicknameChange onSuccess={closeModal} />}
-            {activeModal === "password" && <PasswordChange onSuccess={closeModal} />}
+            {activeModal === "nickname" && (
+              <NicknameChange onSuccess={closeModal} />
+            )}
+            {activeModal === "password" && (
+              <PasswordChange onSuccess={closeModal} />
+            )}
           </ChangeInfoFrame>
         )}
       </S.SidebarContainer>

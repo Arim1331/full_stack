@@ -417,6 +417,20 @@ export const ProfileImg = styled.img`
   flex: 0 0 auto;
 `;
 
+export const UserInitialAvatar = styled.div`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: ${({ $bgColor }) => $bgColor || "#ffe9df"};
+  color: ${({ $textColor }) => $textColor || "#ff5a3c"};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+`;
+
 export const CardTitleLeft = styled.div`
   display: inline-flex;
   align-items: center;

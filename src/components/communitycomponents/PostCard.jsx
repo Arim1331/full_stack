@@ -12,6 +12,17 @@ const NEW_DAYS = 3;
 const POPULAR_DAYS = 30;
 const POPULAR_TOP_N = 8;
 
+const AVATAR_COLORS = [
+  { bg: "#FFE9DF", color: "#FF5A3C" },
+  { bg: "#E8F3FF", color: "#2F80ED" },
+  { bg: "#EAF7EA", color: "#2E7D32" },
+  { bg: "#F3E8FF", color: "#8E44AD" },
+  { bg: "#FFF3CD", color: "#B7791F" },
+  { bg: "#E0F7FA", color: "#00838F" },
+  { bg: "#FCE4EC", color: "#C2185B" },
+  { bg: "#EDE7F6", color: "#5E35B1" },
+];
+
 // ===== 날짜 파싱 헬퍼 =====
 const parseDate = (v) => {
   if (!v) return null;
@@ -55,6 +66,44 @@ const getRelativeTime = (date) => {
   return `${years}년 전`;
 };
 
+const getProfileImage = (item) => {
+  return (
+    item?.profileImage ||
+    item?.memberProfile ||
+    item?.profileImageUrl ||
+    item?.member?.memberProfile ||
+    item?.member?.profileImage ||
+    item?.member?.profileImageUrl ||
+    ""
+  );
+};
+
+const getProfileInitial = (nickname) => {
+  const name = String(nickname || "사용자").trim();
+  return name.charAt(0);
+};
+
+const getAuthorKey = (item, nickname) => {
+  return String(
+    item?.memberId ||
+      item?.member?.id ||
+      item?.member?.memberId ||
+      item?.nickname ||
+      nickname ||
+      "unknown",
+  );
+};
+
+const getHashIndex = (text, length) => {
+  let hash = 0;
+
+  for (let i = 0; i < text.length; i += 1) {
+    hash = text.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  return Math.abs(hash) % length;
+};
+
 const PostCard = ({
   item,
   w,
@@ -91,11 +140,33 @@ const PostCard = ({
   console.log("카드 images:", item.images);
   console.log("카드 최종 이미지:", recipeImage);
 
-  const profileImage = item?.profileImage ?? "/assets/images/pinggu.svg";
+  const profileImage = getProfileImage(item);
   const recipeName = item?.recipeName ?? item?.recipeTitle ?? "요리명 없음";
 
   //  닉네임 방어 (빈값 / 공백 방지)
   const nickname = (item?.nickname || "").trim() || "닉네임 없음";
+  const profileInitial = getProfileInitial(nickname);
+
+  const avatarColor = useMemo(() => {
+    const authorKey = getAuthorKey(item, nickname);
+
+    const uniqueAuthorKeys = [
+      ...new Set(
+        (allItems || [])
+          .map((post) => getAuthorKey(post, post?.nickname))
+          .filter(Boolean),
+      ),
+    ];
+
+    const authorIndex = uniqueAuthorKeys.indexOf(authorKey);
+
+    const colorIndex =
+      authorIndex >= 0
+        ? authorIndex % AVATAR_COLORS.length
+        : getHashIndex(authorKey, AVATAR_COLORS.length);
+
+    return AVATAR_COLORS[colorIndex];
+  }, [allItems, item, nickname]);
 
   const level = item?.level ?? 1;
   const xp = item?.xp ?? 0;
@@ -186,7 +257,16 @@ const PostCard = ({
 
         <S.CardMetaRow>
           <S.MetaLeft>
-            <S.ProfileImg src={profileImage} alt="유저 프로필" />
+            {profileImage ? (
+              <S.ProfileImg src={profileImage} alt="유저 프로필" />
+            ) : (
+              <S.UserInitialAvatar
+                $bgColor={avatarColor.bg}
+                $textColor={avatarColor.color}
+              >
+                {profileInitial}
+              </S.UserInitialAvatar>
+            )}
             <S.UserNickName $mine={isMine}>{nickname}</S.UserNickName>
           </S.MetaLeft>
 
