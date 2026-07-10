@@ -253,6 +253,19 @@ export const NavItem = styled(Link)`
   }
 `;
 
+export const ProfileInitialAvatar = styled.div`
+  width: 140px;
+  height: 140px;
+  border-radius: 16px;
+  background-color: #ffe9df;
+  color: #ff5a3c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  font-weight: 700;
+`;
+
 /* ========== Footer styles ========== */
 
 export const FooterOuter = styled.footer`
