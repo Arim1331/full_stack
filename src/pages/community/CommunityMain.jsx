@@ -373,6 +373,11 @@ const CommunityMain = () => {
         setIsMyPostModalOpen(false);
       } catch (error) {
         console.error("게시글 상세 조회 실패:", error);
+
+        if (error.status === 401) {
+          setLoginModalOpen(true)
+          return
+        }
         alert(error.message);
       }
     },
@@ -975,6 +980,10 @@ const CommunityMain = () => {
 
       <LoginRequireModal
         open={loginModalOpen}
+        title="로그인이 필요합니다."
+        desc="로그인이 만료되었거나 인증 정보가 없습니다. 다시 로그인해주세요."
+        confirmText="로그인하러 가기"
+        cancelText="닫기"
         onClose={() => setLoginModalOpen(false)}
         onConfirm={() => {
           setLoginModalOpen(false);

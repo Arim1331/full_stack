@@ -22,7 +22,14 @@ export const getPostDetail = async (postId) => {
   })
 
   if (!response.ok) {
-    throw new Error("게시글 단일 조회 실패")
+    const error = new Error(
+      response.status === 401
+        ? "로그인이 만료되었습니다."
+        : "게시글 단일 조회 실패"
+    )
+
+    error.status = response.status
+    throw error
   }
 
   return response.json()
