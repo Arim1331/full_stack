@@ -498,6 +498,9 @@ export const UserNickName = styled.p`
   color: ${({ theme }) => theme.PALLETE.mainblack};
   font-weight: 600;
 
+  margin: 0;
+  line-height: 2;
+
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -521,6 +524,7 @@ export const UserNickName = styled.p`
       }
     `}
 `;
+
 export const MetaCenter = styled.div`
   display: inline-flex;
   align-items: center;
