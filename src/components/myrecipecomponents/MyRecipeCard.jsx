@@ -63,6 +63,9 @@ const MyRecipeCard = ({ item, onClick, onToggleBookmark }) => {
     }
   };
 
+  const DEFAULT_RECIPE_IMAGE = "/assets/images/default-recipe.png";
+  const thumbSrc = image || imageUrl || DEFAULT_RECIPE_IMAGE
+
   return (
     <S.Card
       type="button"
@@ -71,7 +74,14 @@ const MyRecipeCard = ({ item, onClick, onToggleBookmark }) => {
       aria-label={`${title} 상세 보기`}
     >
       <S.ThumbArea>
-        <S.ThumbImg src={image || imageUrl} alt={title} loading="lazy" />
+        <S.ThumbImg 
+          src={thumbSrc} 
+          alt={title || "추천 레시피 이미지"} 
+          loading="lazy" 
+          onError={(e) => {
+            e.currentTarget.src = DEFAULT_RECIPE_IMAGE
+          }}
+        />
 
         {/* 아이콘 자체가 버튼 + key로 애니메이션 리셋 */}
         <S.BookmarkIcon
