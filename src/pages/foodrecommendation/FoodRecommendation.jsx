@@ -40,6 +40,31 @@ const addXpToRecipe = (recipe) => {
   };
 };
 
+const DEFAULT_RECIPE_IMAGE = "/assets/images/default-recipe.png";
+
+const getRecipeImageUrl = (recipe) => {
+  return (
+    recipe?.imageUrl ||
+    recipe?.image ||
+    recipe?.recipeImageUrl ||
+    recipe?.recipe_image_url ||
+    recipe?.thumbnailUrl ||
+    recipe?.thumbnail ||
+    recipe?.image_url ||
+    DEFAULT_RECIPE_IMAGE
+  )
+}
+
+const normalizeRecipe = (recipe) => {
+  const imageUrl = getRecipeImageUrl(recipe)
+
+  return {
+    ...recipe,
+    imageUrl,
+    image: imageUrl
+  }
+}
+
 const FoodRecommendation = () => {
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -55,10 +80,18 @@ const FoodRecommendation = () => {
         });
         const data = await res.json();
 
+        console.log("추천 API 원본 data:", JSON.stringify(data, null, 2));
+
         if (!res.ok || data?.statusCode >= 400) {
           console.error("추천 API 실패:", data);
-          const recipeWithXp = addXpToRecipe(data);
-          setRecipes([]);
+
+          const normalizedRecipe = normalizeRecipe(data)
+          const recipeWithXp = addXpToRecipe(normalizedRecipe);
+
+          console.log("추천 API 원본 data:", data)
+          console.log("추천 레시피 정규화:", recipeWithXp)
+
+          setRecipes([recipeWithXp]);
           return;
         }
 

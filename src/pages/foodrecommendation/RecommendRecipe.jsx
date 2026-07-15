@@ -44,7 +44,17 @@ const RecommendRecipe = () => {
     category = "한식",
   } = recipe;
 
-  const imageUrl = recipe.image || recipe.imageUrl;
+  const DEFAULT_RECIPE_IMAGE = "/assets/images/default-recipe.png";
+
+  const imageUrl =
+    recipe?.imageUrl ||
+    recipe?.image ||
+    recipe?.recipeImageUrl ||
+    recipe?.recipe_image_url ||
+    recipe?.thumbnailUrl ||
+    recipe?.thumbnail ||
+    recipe?.image_url ||
+    DEFAULT_RECIPE_IMAGE;
 
   console.log("recipe 전체:", recipe);
   console.log("ingredients:", ingredients);
@@ -91,7 +101,13 @@ const RecommendRecipe = () => {
     <S.Page>
       {/* Hero */}
       <S.Hero>
-        <S.HeroImage src={imageUrl} />
+        <S.HeroImage
+          src={imageUrl}
+          alt={title || "추천 레시피 이미지"}
+          onError={(e) => {
+            e.currentTarget.src = DEFAULT_RECIPE_IMAGE;
+          }}
+        />
       </S.Hero>
 
       <S.Container>
