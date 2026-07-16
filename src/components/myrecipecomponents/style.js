@@ -31,7 +31,7 @@ export const SortTabButton = styled.button`
   /* 구분자 | */
   &::after {
     content: ${({ $isLast }) => ($isLast ? "''" : "'|'")};
-    margin-left: 6px;     /* ← 핵심 */
+    margin-left: 6px; /* ← 핵심 */
     color: ${({ theme }) => theme.PALLETE.gray[300]};
     font-weight: 400;
   }
@@ -90,20 +90,36 @@ const pop = keyframes`
   100% { transform: scale(1); }
 `;
 
+// export const ThumbArea = styled.div`
+//   position: relative;
+//   width: 100%;
+//   aspect-ratio: 1 / 1; /* 정사각형 */
+//   border-radius: 18px; /* 1번처럼 둥글게 */
+//   overflow: hidden;
+// `;
+
+// export const ThumbImg = styled.img`
+//   width: 100%;
+//   height: auto;
+//   object-fit: cover;
+//   display: block;
+//   transform: translateZ(0);
+// `;
+
 export const ThumbArea = styled.div`
-  position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1; /* 정사각형 */
-  border-radius: 18px; /* 1번처럼 둥글게 */
+  aspect-ratio: 1 / 1;
+  position: relative;
   overflow: hidden;
+  border-radius: 16px;
+  background: #f5f5f5;
 `;
 
 export const ThumbImg = styled.img`
   width: 100%;
-  height: auto;
+  height: 100%;
   object-fit: cover;
   display: block;
-  transform: translateZ(0);
 `;
 
 export const BookmarkIcon = styled.img`
@@ -231,7 +247,6 @@ export const MetaChip = styled.span`
   white-space: nowrap;
 `;
 
-
 /** ---------------------------
  * MyRecipeEmpty (빈 화면)
  * --------------------------- */
@@ -263,7 +278,6 @@ export const MyRecipeEmptyDesc = styled.p`
   color: ${({ theme }) => theme.PALLETE.gray[700]};
 `;
 
-
 /** ---------------------------
  * MyRecipeEmpty CTA Button
  * --------------------------- */
@@ -292,12 +306,9 @@ export const MyRecipeEmptyButton = styled.button`
     /* transform: translateY(-2px); */
   }
 
-  &:active{
+  &:active {
     background: ${({ theme }) => theme.PALLETE.primary.main};
     color: ${({ theme }) => theme.PALLETE.white};
     transform: translateY(-2px);
-
   }
-
-
 `;
