@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import S from "./style";
 import { useNavigate } from "react-router-dom";
 import MyRecipeCard from "../../components/myrecipecomponents/MyRecipeCard";
+import { savedRecipe } from "../../api/aiSavedRecipe";
 
 const getRandomInt = (min, max) => {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -52,18 +53,18 @@ const getRecipeImageUrl = (recipe) => {
     recipe?.thumbnail ||
     recipe?.image_url ||
     DEFAULT_RECIPE_IMAGE
-  )
-}
+  );
+};
 
 const normalizeRecipe = (recipe) => {
-  const imageUrl = getRecipeImageUrl(recipe)
+  const imageUrl = getRecipeImageUrl(recipe);
 
   return {
     ...recipe,
     imageUrl,
-    image: imageUrl
-  }
-}
+    image: imageUrl,
+  };
+};
 
 const FoodRecommendation = () => {
   const [recipes, setRecipes] = useState([]);
@@ -84,21 +85,18 @@ const FoodRecommendation = () => {
 
         if (!res.ok || data?.statusCode >= 400) {
           console.error("추천 API 실패:", data);
-
-          const normalizedRecipe = normalizeRecipe(data)
-          const recipeWithXp = addXpToRecipe(normalizedRecipe);
-
-          console.log("추천 API 원본 data:", data)
-          console.log("추천 레시피 정규화:", recipeWithXp)
-
-          setRecipes([recipeWithXp]);
+          setRecipes([]);
           return;
         }
 
         // UI 유지하면서 데이터만 교체
-        const recipeWithXp = addXpToRecipe(data);
+        const normalizedRecipe = normalizeRecipe(data)
+        const recipeWithXp = addXpToRecipe({
+          ...normalizedRecipe,
+          saved: false
+        })
+
         setRecipes([recipeWithXp]);
-        
       } catch (e) {
         console.error("추천 실패:", e);
       } finally {
@@ -109,6 +107,44 @@ const FoodRecommendation = () => {
     fetchRecommend();
   }, []);
 
+  const getSaveIngredients = (ingredients = []) => {
+    const result = {
+      main: [],
+      sub: [],
+    };
+
+    if (!Array.isArray(ingredients)) {
+      return result;
+    }
+
+    ingredients.forEach((item) => {
+      const name = item?.name || item;
+      const category = item?.category;
+
+      if (!name) return;
+
+      if (["육류", "해산물", "채소"].includes(category)) {
+        result.main.push(name);
+      } else {
+        result.sub.push(name);
+      }
+    });
+
+    return result;
+  };
+
+  const getSaveSteps = (item) => {
+    if (Array.isArray(item.steps) && item.steps.length > 0) {
+      return item.steps;
+    }
+
+    if (typeof item.recipe === "string") {
+      return item.recipe.split(/\d+\.\s/).filter((s) => s.trim() !== "");
+    }
+
+    return [];
+  };
+
   const handleClickCard = (item) => {
     navigate(
       `/foodrecommendation/recommendRecipe/${item.id ?? item.recipeId ?? "ai"}`,
@@ -118,6 +154,45 @@ const FoodRecommendation = () => {
         },
       },
     );
+  };
+
+  const handleToggleBookmark = async (item) => {
+    try {
+      if (item.saved) {
+        alert("이미 저장된 레시피입니다.");
+        return;
+      }
+
+      const payload = {
+        title: item.title,
+        description: item.recipe || item.description || "",
+        imageUrl:
+          item.imageUrl || item.image || "/assets/images/default-recipe.png",
+        cookTime: item.cookTime || item.cookTimeMin || 10,
+        difficulty: item.level || item.difficulty || "쉬움",
+        category: item.category || "기타",
+        xp: item.xp || 0,
+        ingredients: getSaveIngredients(item.ingredients),
+        steps: getSaveSteps(item),
+      };
+
+      console.log("저장 요청 payload:", payload);
+
+      await savedRecipe(payload);
+
+      setRecipes((prev) =>
+        prev.map((recipe) =>
+          (recipe.id ?? recipe.recipeId) === (item.id ?? item.recipeId)
+            ? { ...recipe, saved: true }
+            : recipe,
+        ),
+      );
+
+      alert("레시피가 저장되었습니다.");
+    } catch (error) {
+      console.error("레시피 저장 실패:", error);
+      alert("레시피 저장에 실패했습니다.");
+    }
   };
 
   return (
@@ -141,6 +216,7 @@ const FoodRecommendation = () => {
                   key={item.id ?? item.recipeId ?? index}
                   item={item}
                   onClick={() => handleClickCard(item)}
+                  onToggleBookmark={() => handleToggleBookmark(item)}
                 />
               ))
             )}
