@@ -71,14 +71,21 @@ const MyRecipe = () => {
           item.imageUrl ??
           item.recipeImageUrl ??
           "/assets/images/default-recipe.png",
+
         cookTime: item.cookTime ?? item.cookTimeMin ?? 0,
         difficulty: item.difficulty ?? item.recipeDifficulty,
         category: item.category ?? item.recipeCategory,
         xp: item.xp ?? item.recipeXp,
+
         createdAt: item.createdAt,
         saved: true,
+
         ingredients: item.ingredients ?? { main: [], sub: [] },
         steps: item.steps ?? [],
+
+        missingIngredients: Array.isArray(item.missingIngredients)
+          ? item.missingIngredients
+          : [],
       }));
 
       setSavedList(mapped);
@@ -163,7 +170,19 @@ const MyRecipe = () => {
       }
 
       if (sortKey === "difficulty_low") {
-        const rank = { 하: 0, 중: 1, 상: 2 };
+        const rank = {
+          하: 0,
+          쉬움: 0,
+          easy: 0,
+
+          중: 1,
+          보통: 1,
+          medium: 1,
+
+          상: 2,
+          어려움: 2,
+          hard: 2,
+        };
         const diff = (rank[a.difficulty] ?? 99) - (rank[b.difficulty] ?? 99);
         return diff !== 0 ? diff : tieBreaker();
       }

@@ -90,11 +90,11 @@ const FoodRecommendation = () => {
         }
 
         // UI 유지하면서 데이터만 교체
-        const normalizedRecipe = normalizeRecipe(data)
+        const normalizedRecipe = normalizeRecipe(data);
         const recipeWithXp = addXpToRecipe({
           ...normalizedRecipe,
-          saved: false
-        })
+          saved: false,
+        });
 
         setRecipes([recipeWithXp]);
       } catch (e) {
@@ -168,12 +168,21 @@ const FoodRecommendation = () => {
         description: item.recipe || item.description || "",
         imageUrl:
           item.imageUrl || item.image || "/assets/images/default-recipe.png",
-        cookTime: item.cookTime || item.cookTimeMin || 10,
-        difficulty: item.level || item.difficulty || "쉬움",
-        category: item.category || "기타",
+
+        cookTime: item.cookTime ?? item.cookTimeMin,
+        difficulty: item.difficulty || item.level,
+        category: item.category,
         xp: item.xp || 0,
+
         ingredients: getSaveIngredients(item.ingredients),
         steps: getSaveSteps(item),
+
+        missingIngredients: Array.isArray(item.ingredients),
+        steps: getSaveSteps(item),
+
+        missingIngredients: Array.isArray(item.missingIngredients)
+          ? item.missingIngredients
+          : [],
       };
 
       console.log("저장 요청 payload:", payload);
