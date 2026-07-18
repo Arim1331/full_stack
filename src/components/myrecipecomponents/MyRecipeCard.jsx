@@ -28,8 +28,13 @@ const MyRecipeCard = ({ item, onClick, onToggleBookmark }) => {
      부족한 재료 텍스트 정규화
      =============================== */
   const missingText = (() => {
-    if (typeof missingIngredients === "number") return `${missingIngredients}개`;
-    if (Array.isArray(missingIngredients)) return `${missingIngredients.length}개`;
+    if (typeof missingIngredients === "number")
+      return `${missingIngredients}개`;
+    if (Array.isArray(missingIngredients)) {
+      return missingIngredients.length > 0
+        ? `${missingIngredients.length}개`
+        : "없음";
+    }
 
     if (typeof missingIngredients === "string") {
       const cleaned = missingIngredients
@@ -42,7 +47,7 @@ const MyRecipeCard = ({ item, onClick, onToggleBookmark }) => {
       return cleaned;
     }
 
-    return "-";
+    return "없음";
   })();
 
   /* ===============================
@@ -64,7 +69,7 @@ const MyRecipeCard = ({ item, onClick, onToggleBookmark }) => {
   };
 
   const DEFAULT_RECIPE_IMAGE = "/assets/images/default-recipe.png";
-  const thumbSrc = image || imageUrl || DEFAULT_RECIPE_IMAGE
+  const thumbSrc = image || imageUrl || DEFAULT_RECIPE_IMAGE;
 
   return (
     <S.Card
@@ -74,12 +79,12 @@ const MyRecipeCard = ({ item, onClick, onToggleBookmark }) => {
       aria-label={`${title} 상세 보기`}
     >
       <S.ThumbArea>
-        <S.ThumbImg 
-          src={thumbSrc} 
-          alt={title || "추천 레시피 이미지"} 
-          loading="lazy" 
+        <S.ThumbImg
+          src={thumbSrc}
+          alt={title || "추천 레시피 이미지"}
+          loading="lazy"
           onError={(e) => {
-            e.currentTarget.src = DEFAULT_RECIPE_IMAGE
+            e.currentTarget.src = DEFAULT_RECIPE_IMAGE;
           }}
         />
 
@@ -100,7 +105,9 @@ const MyRecipeCard = ({ item, onClick, onToggleBookmark }) => {
       <S.Body>
         <S.Title title={title}>{title}</S.Title>
 
-        {(recipe || description) && (<S.Desc title={recipe || description}>{recipe || description}</S.Desc>)}
+        {(recipe || description) && (
+          <S.Desc title={recipe || description}>{recipe || description}</S.Desc>
+        )}
 
         <S.BadgeRow>
           <S.Badge className="star">
@@ -112,7 +119,6 @@ const MyRecipeCard = ({ item, onClick, onToggleBookmark }) => {
               height="16"
             />
             {rating ? Number(rating).toFixed(1) : "4.5"}
-
           </S.Badge>
 
           <S.Badge className="xp">XP {xp || 300}</S.Badge>
