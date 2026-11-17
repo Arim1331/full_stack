@@ -1,5 +1,5 @@
 import { FONT_STYLE } from "../../styles/common";
-import styled, { keyframes } from "styled-components";
+import styled, { css, keyframes } from "styled-components";
 
 /** ---------------------------
  * SortTab (오른쪽 정렬 탭)
@@ -434,3 +434,330 @@ export const MyRecipeEmptyButton = styled.button`
 //     opacity: 1;
 //   }
 // `;
+
+/** ---------------------------------------------------------
+ * [모바일 리스트형] variant="list" 전용 스타일 (마이레시피 전용)
+ * - 기존 export는 수정하지 않고 아래에 "추가"만 함
+ * - 기준: 768px (공통 헤더/하단 네비와 동일)
+ * --------------------------------------------------------- */
+
+/* 그리드: ≤768px 에서 1열 리스트 (기존 Grid 확장) */
+export const ListGrid = styled(Grid)`
+  @media (max-width: 768px) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+`;
+
+/* 데스크톱용(기존 카드) / 모바일용(리스트 카드) 전환 래퍼 */
+export const ListDesktopOnly = styled.div`
+  display: block;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+export const ListMobileOnly = styled.div`
+  display: none;
+
+  @media (max-width: 768px) {
+    display: block;
+  }
+`;
+
+export const ListCard = styled.div`
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 10px 0;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.PALLETE.primary.main};
+    outline-offset: 2px;
+    border-radius: 12px;
+  }
+`;
+
+export const ListThumb = styled.div`
+  flex: 0 0 104px;
+  width: 104px;
+  height: 104px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f5f5f5;
+`;
+
+export const ListThumbImg = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+`;
+
+export const ListBody = styled.div`
+  flex: 1;
+  min-width: 0;
+  /* 우측 ⋮ 버튼 영역 확보 */
+  padding-right: 28px;
+`;
+
+export const ListTitle = styled.h6`
+  ${FONT_STYLE.PRETENDARD.H7_REGULAR};
+  font-weight: ${({ theme }) => theme.FONT_WEIGHT.PRETENDARD.BOLD};
+  color: ${({ theme }) => theme.PALLETE.mainblack};
+  margin: 2px 0 8px;
+  line-height: 1.35;
+  word-break: keep-all;
+
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+`;
+
+export const ListMeta = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-bottom: 8px;
+`;
+
+export const ListMetaItem = styled.span`
+  ${FONT_STYLE.PRETENDARD.H8_REGULAR};
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  white-space: nowrap;
+  color: ${({ theme }) => theme.PALLETE.gray[900]};
+
+  svg,
+  img {
+    flex: 0 0 auto;
+  }
+
+  &.rating {
+    color: ${({ theme }) => theme.PALLETE.mainblack};
+    font-weight: ${({ theme }) => theme.FONT_WEIGHT.PRETENDARD.BOLD};
+  }
+`;
+
+export const ListTagRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+`;
+
+export const ListTag = styled.span`
+  ${FONT_STYLE.PRETENDARD.H8_REGULAR};
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.PALLETE.primary.sub};
+  color: ${({ theme }) => theme.PALLETE.primary.main};
+`;
+
+/* ⋮ 메뉴 */
+export const ListMenuWrap = styled.div`
+  position: absolute;
+  top: 6px;
+  right: -6px;
+  z-index: 5;
+`;
+
+export const ListMenuButton = styled.button`
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.PALLETE.primary.main};
+  }
+`;
+
+export const ListMenu = styled.div`
+  position: absolute;
+  top: 38px;
+  right: 6px;
+  min-width: 112px;
+  padding: 6px;
+  background: ${({ theme }) => theme.PALLETE.background.white};
+  border: 1px solid ${({ theme }) => theme.PALLETE.gray[300]};
+  border-radius: 8px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+`;
+
+export const ListMenuItem = styled.button`
+  ${FONT_STYLE.PRETENDARD.H7_REGULAR};
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  text-align: left;
+  white-space: nowrap;
+  color: ${({ theme }) => theme.PALLETE.mainblack};
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    background: ${({ theme }) => theme.PALLETE.gray[100]};
+  }
+`;
+
+/** ---------------------------------------------------------
+ * [모바일 툴바] 전체(N) + 둥근 검색바 + 정렬 아이콘
+ * --------------------------------------------------------- */
+const toolbarShake = keyframes`
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  50% { transform: translateX(4px); }
+  75% { transform: translateX(-4px); }
+  100% { transform: translateX(0); }
+`;
+
+export const MobileToolbar = styled.div`
+  width: 100%;
+`;
+
+export const MobileTabBar = styled.div`
+  border-bottom: 1px solid ${({ theme }) => theme.PALLETE.gray[200]};
+`;
+
+/* 탭 전환 기능 없는 정적 라벨 (클릭 동작 없음) */
+export const MobileTotalLabel = styled.h2`
+  ${FONT_STYLE.PRETENDARD.H6_REGULAR};
+  display: inline-block;
+  margin: 0 0 -1px;
+  padding: 10px 4px 12px;
+  font-weight: ${({ theme }) => theme.FONT_WEIGHT.PRETENDARD.BOLD};
+  color: ${({ theme }) => theme.PALLETE.primary.main};
+  border-bottom: 2px solid ${({ theme }) => theme.PALLETE.primary.main};
+`;
+
+export const MobileSearchRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 0 8px;
+`;
+
+export const MobileSearchForm = styled.form`
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.PALLETE.gray[70]};
+
+  &:focus-within {
+    border-color: ${({ theme }) => theme.PALLETE.primary.main};
+    background: ${({ theme }) => theme.PALLETE.background.white};
+  }
+
+  ${({ $error, theme }) =>
+    $error &&
+    css`
+      animation: ${toolbarShake} 0.35s ease;
+      border-color: ${theme.PALLETE.error};
+      background: ${theme.PALLETE.background.white};
+    `}
+`;
+
+export const MobileSearchIcon = styled.img`
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+`;
+
+export const MobileSearchInput = styled.input`
+  ${FONT_STYLE.PRETENDARD.H7_REGULAR}; /* 16px: iOS 확대 방지 */
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.PALLETE.gray[800]};
+  }
+`;
+
+export const MobileSortWrap = styled.div`
+  position: relative;
+  flex: 0 0 auto;
+`;
+
+export const MobileSortButton = styled.button`
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.PALLETE.primary.main};
+  }
+`;
+
+export const MobileSortMenu = styled.div`
+  position: absolute;
+  top: 48px;
+  right: 0;
+  z-index: 50;
+  min-width: 150px;
+  width: max-content;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: ${({ theme }) => theme.PALLETE.background.white};
+  border: 1px solid ${({ theme }) => theme.PALLETE.gray[300]};
+  border-radius: 8px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+`;
+
+export const MobileSortItem = styled.button`
+  ${FONT_STYLE.PRETENDARD.H7_REGULAR};
+  width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  color: ${({ theme, $active }) =>
+    $active ? theme.PALLETE.primary.main : theme.PALLETE.mainblack};
+  font-weight: ${({ $active }) => ($active ? 600 : 400)};
+
+  &:hover,
+  &:focus-visible {
+    background: ${({ theme }) => theme.PALLETE.gray[100]};
+  }
+`;

@@ -1,8 +1,40 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as S from "./style";
 import { getRecipeRating } from "../../utils/recipeRating";
 
-const MyRecipeCard = ({ item, onClick, onToggleBookmark }) => {
+/* 모바일 리스트 카드용 인라인 아이콘 (신규 에셋 파일 없이 사용) */
+const ClockIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <circle cx="12" cy="12" r="9" stroke="#ff4e37" strokeWidth="2.4" />
+    <path d="M12 7v5l3 2" stroke="#ff4e37" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const XpIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <path d="M5 20V12M12 20V5M19 20v-5" stroke="#ff4e37" strokeWidth="3" strokeLinecap="round" />
+  </svg>
+);
+
+const KebabIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="#111" aria-hidden="true">
+    <circle cx="12" cy="5" r="2" />
+    <circle cx="12" cy="12" r="2" />
+    <circle cx="12" cy="19" r="2" />
+  </svg>
+);
+
+/**
+ * variant
+ * - "default": 기존 세로형 카드 (추천요리 등 기본 사용처, 변경 없음)
+ * - "list": 마이레시피 전용. >768px 기존 카드 그대로 / ≤768px 가로형 리스트 카드
+ */
+const MyRecipeCard = ({
+  item,
+  onClick,
+  onToggleBookmark,
+  variant = "default",
+}) => {
   const {
     id,
     title,
@@ -12,6 +44,7 @@ const MyRecipeCard = ({ item, onClick, onToggleBookmark }) => {
     cookTime,
     difficulty,
     level,
+    category,
     missingIngredients,
     image,
     imageUrl,
@@ -96,7 +129,65 @@ const MyRecipeCard = ({ item, onClick, onToggleBookmark }) => {
   const DEFAULT_RECIPE_IMAGE = "/assets/images/default-recipe.png";
   const thumbSrc = image || imageUrl || DEFAULT_RECIPE_IMAGE;
 
-  return (
+  /* ===============================
+     [list 전용] ⋮ 메뉴 (바깥 클릭 / ESC 로 닫기)
+     =============================== */
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+
+    const handleOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    const handleEsc = (e) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+
+    document.addEventListener("mousedown", handleOutside);
+    document.addEventListener("touchstart", handleOutside);
+    document.addEventListener("keydown", handleEsc);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      document.removeEventListener("touchstart", handleOutside);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, [menuOpen]);
+
+  // 카드 본문 클릭: 메뉴가 열려 있으면 메뉴만 닫고 상세 이동은 하지 않음
+  const handleListCardClick = (e) => {
+    if (menuOpen) {
+      setMenuOpen(false);
+      return;
+    }
+    onClick?.(e);
+  };
+
+  const handleListCardKeyDown = (e) => {
+    // ⋮ 버튼/메뉴에서 올라온 키 이벤트는 무시 (카드 자신에서 발생한 경우만)
+    if (e.target !== e.currentTarget) return;
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onClick?.(e);
+    }
+  };
+
+  const handleMenuToggle = (e) => {
+    e.stopPropagation(); // 카드 상세 이동 방지
+    setMenuOpen((prev) => !prev);
+  };
+
+  // 기존 북마크(저장 해제) 핸들러와 동일한 onToggleBookmark 호출
+  const handleMenuUnsave = (e) => {
+    e.stopPropagation();
+    setMenuOpen(false);
+    onToggleBookmark?.(id);
+  };
+
+  const desktopCard = (
     <S.Card
       type="button"
       onClick={onClick}
@@ -163,6 +254,97 @@ const MyRecipeCard = ({ item, onClick, onToggleBookmark }) => {
         </S.MetaRow>
       </S.Body>
     </S.Card>
+  );
+
+  if (variant !== "list") return desktopCard;
+
+  const cookTimeText = `${cookTime ?? 10}분`;
+
+  return (
+    <>
+      {/* >768px: 기존 카드 그대로 */}
+      <S.ListDesktopOnly>{desktopCard}</S.ListDesktopOnly>
+
+      {/* ≤768px: 가로형 리스트 카드 */}
+      <S.ListMobileOnly>
+        <S.ListCard
+          role="link"
+          tabIndex={0}
+          aria-label={`${title} 상세 보기`}
+          onClick={handleListCardClick}
+          onKeyDown={handleListCardKeyDown}
+        >
+          <S.ListThumb>
+            <S.ListThumbImg
+              src={thumbSrc}
+              alt={title || "저장한 레시피 이미지"}
+              loading="lazy"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = DEFAULT_RECIPE_IMAGE;
+              }}
+            />
+          </S.ListThumb>
+
+          <S.ListBody>
+            <S.ListTitle title={title}>{title}</S.ListTitle>
+
+            <S.ListMeta>
+              <S.ListMetaItem className="rating">
+                <img
+                  src="/assets/icons/star.svg"
+                  alt=""
+                  aria-hidden="true"
+                  width="14"
+                  height="14"
+                />
+                {displayRating}
+              </S.ListMetaItem>
+              <S.ListMetaItem>
+                <ClockIcon />
+                {cookTimeText}
+              </S.ListMetaItem>
+              <S.ListMetaItem>
+                <XpIcon />
+                XP {xp ?? 0}
+              </S.ListMetaItem>
+            </S.ListMeta>
+
+            {/* 실제 데이터(category)가 있을 때만 태그 표시 */}
+            {category ? (
+              <S.ListTagRow>
+                <S.ListTag>{category}</S.ListTag>
+              </S.ListTagRow>
+            ) : null}
+          </S.ListBody>
+
+          <S.ListMenuWrap ref={menuRef}>
+            <S.ListMenuButton
+              type="button"
+              aria-label="더보기 메뉴"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              onClick={handleMenuToggle}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <KebabIcon />
+            </S.ListMenuButton>
+
+            {menuOpen && (
+              <S.ListMenu role="menu">
+                <S.ListMenuItem
+                  type="button"
+                  role="menuitem"
+                  onClick={handleMenuUnsave}
+                >
+                  저장 해제
+                </S.ListMenuItem>
+              </S.ListMenu>
+            )}
+          </S.ListMenuWrap>
+        </S.ListCard>
+      </S.ListMobileOnly>
+    </>
   );
 };
 
