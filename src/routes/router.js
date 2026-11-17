@@ -15,6 +15,8 @@ import RecommendRecipe from "../pages/foodrecommendation/RecommendRecipe";
 import FoodComplete from "../pages/foodrecommendation/FoodComplete";
 import CommunityMain from "../pages/community/CommunityMain";
 import PostPopUp from "../pages/community/PostPopUp";
+import CommunityPostDetailMobile from "../pages/community/CommunityPostDetailMobile";
+import CommunityPostEditMobile from "../pages/community/CommunityPostEditMobile";
 import LevelAndBadge from "../pages/levelandbadge/LevelAndBadge";
 import ReportAndChallenge from "../pages/reportandchallenge/ReportAndChallenge";
 import LoginPage from "../pages/loginandjoin/LoginPage";
@@ -87,6 +89,16 @@ const router = createBrowserRouter([
         path: "/community",
         // element: <Navigate to="/communitymain" replace />,
         element: <CommunityRedirect />,
+      },
+      {
+        // 모바일(≤768px) 게시글 상세 페이지. 데스크톱 폭에서는 기존 모달(/communitymain?postId=)로 이동
+        path: "/community/posts/:postId",
+        element: <CommunityPostDetailMobile />,
+      },
+      {
+        // 모바일(≤768px) 게시글 수정 페이지. 데스크톱 폭에서는 기존 모달(/communitymain?postId=)로 이동
+        path: "/community/posts/:postId/edit",
+        element: <CommunityPostEditMobile />,
       },
       {
         path: "/levelandbadge",

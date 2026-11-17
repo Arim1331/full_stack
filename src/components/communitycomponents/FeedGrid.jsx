@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import * as S from "../../pages/community/style";
 import PostCard from "./PostCard";
+import useMediaQuery from "../../hooks/useMediaQuery";
 
 const PAGE_SIZE = 12;
 
@@ -19,7 +20,16 @@ const FeedGrid = ({
   meNickname,
   onLikeToggle,
   onEmptyAction,
+  mobileList = false, // (선택) true면 모바일(≤768px)에서 가로형 리스트 카드로 표시
+  // ----- (선택) 목록 복원 모드: 미전달 시 아래 복원 로직은 전혀 동작하지 않음 -----
+  restoreVisibleCount, // 복원할 노출 개수 (마운트 시점 값만 사용)
+  restoreDataReady = false, // 게시글 로딩이 끝났는지 (끝나기 전에는 복원 완료 처리하지 않음)
+  onRestored, // 복원된 개수가 실제로 렌더된 뒤 호출
+  visibleCountRef, // 현재 노출 개수를 부모가 저장할 수 있도록 노출하는 ref
 }) => {
+  const isMobile = useMediaQuery("(max-width: 768px)");
+  const useMobileList = mobileList && isMobile;
+  const ListWrap = useMobileList ? S.MobileFeedList : S.FeedGridWrap;
   const showSearchEmpty = isSearching && items.length === 0;
   const showCommunityEmpty = !isSearching && items.length === 0;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -33,15 +43,72 @@ const FeedGrid = ({
     [items, visibleCount],
   );
 
+  // ===== 목록 복원 (restoreVisibleCount 가 전달된 경우에만) =====
+  const restoreModeRef = useRef(restoreVisibleCount != null);
+  const restoreTargetRef = useRef(restoreVisibleCount ?? null); // 복원 대기값
+  const awaitRenderRef = useRef(null); // 적용했지만 아직 렌더 확인 전인 개수
+  const [restoreTick, setRestoreTick] = useState(0);
+  const prevKeywordRef = useRef(searchKeyword);
+
+  // 복원 모드에서는 이미지/좋아요 갱신처럼 id 가 안 바뀌는 items 재생성에 리셋되지 않도록 id 시그니처로 비교
+  const idSignature = useMemo(() => items.map((it) => it?.id).join(","), [items]);
+  const resetKey = restoreModeRef.current ? idSignature : items;
+
   useEffect(() => {
+    // 복원 대기 중에는 리셋하지 않음 (복원 effect 가 개수를 정함)
+    if (restoreTargetRef.current != null) return;
+
     setVisibleCount(PAGE_SIZE);
     setIsLoading(false);
-  }, [items]);
+  }, [resetKey]);
+
+  // 검색어가 바뀌면 복원 대기값 폐기
+  useEffect(() => {
+    if (prevKeywordRef.current !== searchKeyword) {
+      prevKeywordRef.current = searchKeyword;
+      restoreTargetRef.current = null;
+    }
+  }, [searchKeyword]);
+
+  // 데이터 로딩이 끝난 뒤에만 복원 개수 적용 (일부만 로딩된 상태에서 완료 처리 금지)
+  useEffect(() => {
+    if (restoreTargetRef.current == null) return;
+    if (!restoreDataReady) return;
+
+    const target = Math.max(restoreTargetRef.current, PAGE_SIZE);
+    restoreTargetRef.current = null;
+
+    if (items.length === 0) {
+      onRestored?.();
+      return;
+    }
+
+    const next = Math.min(target, items.length);
+    awaitRenderRef.current = next;
+    setVisibleCount(next);
+    setIsLoading(false);
+    setRestoreTick((t) => t + 1);
+  }, [restoreDataReady, idSignature, items.length, onRestored]);
+
+  // 복원한 개수가 실제로 렌더된 커밋 이후에 완료 알림
+  useEffect(() => {
+    if (awaitRenderRef.current == null) return;
+    if (visibleItems.length !== awaitRenderRef.current) return;
+
+    awaitRenderRef.current = null;
+    onRestored?.();
+  }, [restoreTick, visibleItems.length, onRestored]);
+
+  // 부모가 카드 클릭 시점에 현재 노출 개수를 저장할 수 있도록 공유
+  useEffect(() => {
+    if (visibleCountRef) visibleCountRef.current = visibleCount;
+  }, [visibleCount, visibleCountRef]);
 
   const loadMore = useCallback(() => {
     if (isLoading) return;
     if (!hasMore) return;
 
+    restoreTargetRef.current = null; // 사용자가 직접 더 불러오면 복원 대기값 폐기
     setIsLoading(true);
     setTimeout(() => {
       setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, items.length));
@@ -115,7 +182,7 @@ const FeedGrid = ({
 
   return (
     <S.FeedGridSection>
-      <S.FeedGridWrap>
+      <ListWrap>
         {showSearchEmpty ? (
           <S.EmptyState>
             <S.EmptyTitle>“{searchKeyword}” 검색 결과가 없습니다.</S.EmptyTitle>
@@ -139,13 +206,14 @@ const FeedGrid = ({
               item={item}
               allItems={items}
               w="100%"
+              variant={useMobileList ? "mobile-list" : undefined}
               meNickname={meNickname}
               onClick={() => handleCardClick(item)}
               onLikeToggle={onLikeToggle}
             />
           ))
         )}
-      </S.FeedGridWrap>
+      </ListWrap>
 
       {/* 아래는 items가 있을 때만 보여주기 */}
       {items.length > 0 && (

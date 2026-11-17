@@ -1,5 +1,16 @@
-import React, { useState, useCallback, useEffect, useMemo } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
+import {
+  useSearchParams,
+  useNavigate,
+  useLocation,
+  Navigate,
+} from "react-router-dom";
 import * as S from "./style";
 
 import { CommunityHeader } from "../../components/communitycomponents/CommunityHeader";
@@ -7,6 +18,10 @@ import TrendingCarousel from "../../components/communitycomponents/TrendingCarou
 import FeedGrid from "../../components/communitycomponents/FeedGrid";
 import FloatingActions from "../../components/layoutcomponents/FloatingActions";
 import SortTab from "../../components/myrecipecomponents/SortTab";
+import CommunityMobileSortTab from "../../components/communitycomponents/CommunityMobileSortTab";
+import CommunityMobileSearch from "../../components/communitycomponents/CommunityMobileSearch";
+import useMediaQuery from "../../hooks/useMediaQuery";
+import { isMyPost } from "../../utils/communityPost";
 
 import CommunityPostModal from "../../components/communitycomponents/CommunityPostModal";
 import MyPostModal from "../../components/communitycomponents/MyPostModal";
@@ -29,9 +44,52 @@ import {
   replacePostImages,
 } from "../../api/postimage";
 
+// ===== 모바일: 상세 페이지 이동 전/후 목록 상태(검색어/정렬/스크롤/노출 개수) 저장·복원 =====
+const LIST_STATE_KEY = "community:list";
+
+const readSavedListState = (locationKey) => {
+  try {
+    const raw = sessionStorage.getItem(LIST_STATE_KEY);
+    if (!raw) return null;
+
+    const saved = JSON.parse(raw);
+    // 같은 히스토리 엔트리로 돌아온 경우(뒤로가기/새로고침)에만 복원
+    return saved?.key === locationKey ? saved : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeSavedListState = (state) => {
+  try {
+    sessionStorage.setItem(LIST_STATE_KEY, JSON.stringify(state));
+  } catch {
+    // 저장 실패(사생활 보호 모드 등)는 무시: 복원만 생략됨
+  }
+};
+
 const CommunityMain = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
+
+  // 모바일(≤768px) 여부: 모바일/데스크톱 UI 중 한쪽만 렌더
+  const isMobile = useMediaQuery("(max-width: 768px)");
+
+  // 모바일 목록 복원 상태 (마운트 시 한 번만 읽음)
+  const restoredListRef = useRef(undefined);
+  if (restoredListRef.current === undefined) {
+    restoredListRef.current = isMobile ? readSavedListState(location.key) : null;
+  }
+  const visibleCountRef = useRef(null); // FeedGrid 가 갱신하는 현재 노출 개수
+  const listScrollRestoredRef = useRef(false);
+  const [postsLoaded, setPostsLoaded] = useState(false); // 게시글 fetch 완료 여부
+
+  // 모바일 관리 모드(?postId=..&modal=1) 상태
+  const manageOpenedPostIdRef = useRef(null); // 같은 글을 한 번만 열기 위한 가드
+  const manageExitedRef = useRef(false); // 복귀를 한 번만 실행하기 위한 가드
+  const deletedPostIdRef = useRef(null); // deletePost API 가 성공한 게시글 id
+  const [manageAttemptDone, setManageAttemptDone] = useState(false);
 
   const { posts, fetchPosts } = usePostStore();
 
@@ -69,7 +127,9 @@ const CommunityMain = () => {
 
   // 게시글 fetch
   useEffect(() => {
-    fetchPosts();
+    // 목록 복원이 "데이터 로딩 완료" 기준으로 동작하도록 완료 시점만 기록 (fetchPosts 호출/처리는 그대로)
+    // (fetchPosts 는 스토어 내부에서 예외를 처리하므로 성공/실패와 관계없이 완료 시점에 true)
+    Promise.resolve(fetchPosts()).finally(() => setPostsLoaded(true));
   }, [fetchPosts]);
 
   const normalizeFromStore = useCallback((raw) => {
@@ -222,10 +282,11 @@ const CommunityMain = () => {
   const [isMyPostModalOpen, setIsMyPostModalOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
 
-  const [searchState, setSearchState] = useState({
-    keyword: "",
-    sort: "latest",
-  });
+  // 모바일 상세에서 돌아온 경우 저장된 검색어/정렬로 시작, 그 외에는 기존 초기값(latest)
+  const [searchState, setSearchState] = useState(() => ({
+    keyword: restoredListRef.current?.keyword ?? "",
+    sort: restoredListRef.current?.sort ?? "latest",
+  }));
   const isSearching = searchState.keyword.trim().length > 0;
 
   // 간단 텍스트 검색 (레시피명/본문/재료/닉네임)
@@ -361,7 +422,13 @@ const CommunityMain = () => {
           comments: detail.comment ?? [],
         };
 
-        const isMine = !!meNickname && post.author?.nickname === meNickname;
+        // 본인 판별: 작성자 고유 ID 우선, ID가 없으면 기존 닉네임 규칙으로 폴백
+        const isMine = isMyPost({
+          authorId: detail.member?.id ?? detail.memberId,
+          authorNickname: post.author?.nickname,
+          myId: currentUser?.id,
+          myNickname: meNickname,
+        });
 
         setSelectedPost(post);
 
@@ -385,8 +452,39 @@ const CommunityMain = () => {
         alert(error.message);
       }
     },
-    [meNickname, requireLogin],
+    [meNickname, requireLogin, currentUser?.id],
   );
+
+  // 카드 클릭: 모바일은 상세 페이지로 이동(내 글 포함), 데스크톱은 기존 모달 그대로
+  const handleOpenPost = useCallback(
+    (item) => {
+      if (!isMobile) {
+        handleOpenAnyPostModal(item);
+        return;
+      }
+
+      // 돌아왔을 때 검색어/정렬/스크롤/노출 개수를 복원하기 위해 이동 직전에 저장
+      writeSavedListState({
+        key: location.key,
+        keyword: searchState.keyword,
+        sort: searchState.sort,
+        scrollY: window.scrollY,
+        visibleCount: visibleCountRef.current,
+      });
+
+      navigate(`/community/posts/${item.id}`);
+    },
+    [isMobile, handleOpenAnyPostModal, location.key, searchState, navigate],
+  );
+
+  // 복원한 개수가 실제로 렌더된 뒤(데이터 로딩 완료 + 렌더 완료) 스크롤 위치 복원
+  const handleListRestored = useCallback(() => {
+    const saved = restoredListRef.current;
+    if (!saved || listScrollRestoredRef.current) return;
+
+    listScrollRestoredRef.current = true;
+    requestAnimationFrame(() => window.scrollTo(0, saved.scrollY ?? 0));
+  }, []);
   // const handleOpenAnyPostModal = useCallback(
   //   (item) => {
   //     const post = buildPostForModal(item);
@@ -429,6 +527,11 @@ const CommunityMain = () => {
     const idNum = Number(postId);
     if (!Number.isFinite(idNum)) return;
 
+    const isManageMode = searchParams.get("modal") === "1";
+
+    // 모바일: 일반 링크는 상세 페이지로 redirect(아래 <Navigate>)하므로 여기서 모달을 열지 않음
+    if (isMobile && !isManageMode) return;
+
     const item = {
       id: idNum,
       recipeName: `레시피 ${idNum}`,
@@ -442,8 +545,56 @@ const CommunityMain = () => {
       comments: [],
     };
 
+    // 모바일 관리 모드: 기존 모달(내 글 수정/삭제)을 열되, 같은 글은 한 번만 열기(재오픈 방지)
+    if (isMobile && isManageMode) {
+      if (manageOpenedPostIdRef.current === idNum) return;
+      manageOpenedPostIdRef.current = idNum;
+
+      Promise.resolve(handleOpenAnyPostModal(item)).finally(() =>
+        setManageAttemptDone(true),
+      );
+      return;
+    }
+
     handleOpenAnyPostModal(item);
-  }, [searchParams, meNickname, handleOpenAnyPostModal]);
+  }, [searchParams, meNickname, handleOpenAnyPostModal, isMobile]);
+
+  // 모바일 관리 모드: 모달이 닫히면(닫기/수정/삭제 완료/열기 실패) 한 번만 복귀
+  useEffect(() => {
+    const postId = Number(searchParams.get("postId"));
+    const isManageMode =
+      isMobile &&
+      searchParams.get("modal") === "1" &&
+      Number.isInteger(postId) &&
+      postId > 0;
+
+    if (!isManageMode || !manageAttemptDone || manageExitedRef.current) return;
+    if (isOtherPostModalOpen || isMyPostModalOpen || loginModalOpen) return;
+
+    manageExitedRef.current = true;
+
+    // deletePost API 가 실제로 성공한 경우에만 목록으로 이동 (실패 시 모달은 닫히지 않으므로 이 지점에 오지 않음)
+    if (deletedPostIdRef.current === postId) {
+      navigate("/communitymain", { replace: true });
+      return;
+    }
+
+    // 그 외(닫기/수정 완료/열기 실패): 상세 페이지로 복귀
+    if (location.key === "default") {
+      navigate(`/community/posts/${postId}`, { replace: true }); // 히스토리 없음(직접 접속/새로고침)
+    } else {
+      navigate(-1);
+    }
+  }, [
+    searchParams,
+    isMobile,
+    manageAttemptDone,
+    isOtherPostModalOpen,
+    isMyPostModalOpen,
+    loginModalOpen,
+    location.key,
+    navigate,
+  ]);
 
   // ===== 댓글 등록 (로그인 필요) =====
   const handleSubmitComment = useCallback(
@@ -635,6 +786,7 @@ const CommunityMain = () => {
           if (!ok) return;
 
           await deletePost(postId);
+          deletedPostIdRef.current = postId; // 삭제 API 성공 기록 (모바일 관리 모드 복귀 판단용)
           await fetchPosts();
           handleCloseModals();
         } catch (error) {
@@ -849,9 +1001,9 @@ const CommunityMain = () => {
   // ===== 트렌딩 카드 클릭 =====
   const handleTrendingCardClick = useCallback(
     (item) => {
-      handleOpenAnyPostModal(item);
+      handleOpenPost(item);
     },
-    [handleOpenAnyPostModal],
+    [handleOpenPost],
   );
 
   // ===== 좋아요 토글 =====
@@ -928,31 +1080,68 @@ const CommunityMain = () => {
   //   });
   // }, [searchParams]);
 
+  // 모바일: /communitymain?postId=ID 링크는 상세 페이지로 redirect (관리 모드 modal=1 제외)
+  // - replace 이므로 뒤로가기 시 이 링크가 히스토리에 남지 않음
+  // - 상세 페이지의 데스크톱 redirect 목적지(/communitymain?postId=ID)에는 modal 이 없지만
+  //   isMobile 이 false 이므로 서로 순환하지 않음
+  const linkedPostId = Number(searchParams.get("postId"));
+  const redirectToDetail =
+    isMobile &&
+    searchParams.get("modal") !== "1" &&
+    Number.isInteger(linkedPostId) &&
+    linkedPostId > 0;
+
+  if (redirectToDetail) {
+    return <Navigate to={`/community/posts/${linkedPostId}`} replace />;
+  }
+
   return (
     <S.Page>
+      {/* 모바일(≤768px)에서 공통 헤더/푸터 숨김 (이 페이지에서만 적용) */}
+      <S.CommunityMobileLayoutStyle />
+
       <div id="community-top" />
 
-      <S.Container>
-        <CommunityHeader
-          initialKeyword={searchState.keyword}
-          showSort={false}
-          onSearch={({ keyword }) => {
-            setSearchState((prev) => ({
-              ...prev,
-              keyword,
-            }));
+      <S.Container $header>
+        {isMobile ? (
+          <CommunityMobileSearch
+            keyword={searchState.keyword}
+            onSearch={({ keyword }) => {
+              setSearchState((prev) => ({
+                ...prev,
+                keyword,
+              }));
 
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
-          onKeywordChange={(value) => {
-            
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            onKeywordChange={(value) => {
               setSearchState((prev) => ({
                 ...prev,
                 keyword: value,
               }));
-            }
-          }
-        />
+            }}
+          />
+        ) : (
+          <CommunityHeader
+            initialKeyword={searchState.keyword}
+            keyword={searchState.keyword} // 모바일/데스크톱 전환 시 검색어 유지
+            showSort={false}
+            onSearch={({ keyword }) => {
+              setSearchState((prev) => ({
+                ...prev,
+                keyword,
+              }));
+
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            onKeywordChange={(value) => {
+              setSearchState((prev) => ({
+                ...prev,
+                keyword: value,
+              }));
+            }}
+          />
+        )}
       </S.Container>
 
       <S.FullDivider />
@@ -971,24 +1160,39 @@ const CommunityMain = () => {
           </>
         )}
 
-        {displayItems.length > 0 && (
-          <S.FeedSortRow>
-            <SortTab
-              options={COMMUNITY_SORT_OPTIONS}
-              value={searchState.sort}
-              onChange={handleSortChange}
-            />
-          </S.FeedSortRow>
-        )}
+        {displayItems.length > 0 &&
+          (isMobile ? (
+            <S.MobileFeedHeader>
+              <S.MobileSectionTitle>이웃들의 요리 이야기</S.MobileSectionTitle>
+              <CommunityMobileSortTab
+                options={COMMUNITY_SORT_OPTIONS}
+                value={searchState.sort}
+                onChange={handleSortChange}
+              />
+            </S.MobileFeedHeader>
+          ) : (
+            <S.FeedSortRow>
+              <SortTab
+                options={COMMUNITY_SORT_OPTIONS}
+                value={searchState.sort}
+                onChange={handleSortChange}
+              />
+            </S.FeedSortRow>
+          ))}
 
         <FeedGrid
           items={displayItems}
           isSearching={isSearching}
           searchKeyword={searchState.keyword}
-          onCardClick={handleOpenAnyPostModal}
+          onCardClick={handleOpenPost}
           meNickname={meNickname}
           onLikeToggle={handleLikeToggle}
           onEmptyAction={handleEmptyAction}
+          mobileList
+          restoreVisibleCount={restoredListRef.current?.visibleCount ?? undefined}
+          restoreDataReady={postsLoaded}
+          onRestored={handleListRestored}
+          visibleCountRef={visibleCountRef}
         />
       </S.Container>
 
@@ -1024,7 +1228,12 @@ const CommunityMain = () => {
         onToggleLike={handleLikeToggle}
       />
 
-      <FloatingActions targetId="community-top" />
+      {/* 모바일: 하단 고정 네비(68px) 위로 올려 겹침 방지 */}
+      <FloatingActions
+        targetId="community-top"
+        mobileBottomOffset="calc(68px + env(safe-area-inset-bottom) + 16px)"
+        mobileShowAfter={100}
+      />
 
       <LoginRequireModal
         open={loginModalOpen}

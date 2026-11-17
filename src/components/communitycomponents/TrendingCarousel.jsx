@@ -1,4 +1,5 @@
 import React, {
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -7,6 +8,7 @@ import React, {
 } from "react";
 import * as S from "../../pages/community/style";
 import PostCard from "./PostCard";
+import useMediaQuery from "../../hooks/useMediaQuery";
 
 // 슬라이드 전용 상수
 const GAP = 22;
@@ -88,6 +90,8 @@ const TrendingCarousel = ({
     return sorted.slice(0, TRENDING_TOP_N);
   }, [posts]);
 
+  const isMobile = useMediaQuery("(max-width: 768px)");
+
   const viewportRef = useRef(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardW, setCardW] = useState(0);
@@ -107,7 +111,7 @@ const TrendingCarousel = ({
     const resizeObserver = new ResizeObserver(updateCardWidth);
     resizeObserver.observe(viewportElement);
     return () => resizeObserver.disconnect();
-  }, []);
+  }, [isMobile]); // 모바일 → 데스크톱 전환 시 뷰포트를 다시 측정
 
   // items 길이가 줄면 currentIndex가 범위를 벗어날 수 있어서 보정
   useLayoutEffect(() => {
@@ -130,8 +134,84 @@ const TrendingCarousel = ({
     [onCardClick],
   );
 
+  // ===== 모바일: scroll-snap 스와이프 + 도트 인디케이터 =====
+  const trackRef = useRef(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const handleTrackScroll = useCallback(() => {
+    const track = trackRef.current;
+    if (!track || track.children.length === 0) return;
+
+    const cards = track.children;
+    const step =
+      cards.length > 1
+        ? cards[1].offsetLeft - cards[0].offsetLeft
+        : cards[0].offsetWidth;
+    const maxScroll = track.scrollWidth - track.clientWidth;
+
+    let index = step > 0 ? Math.round(track.scrollLeft / step) : 0;
+    // 끝까지 스크롤되면 마지막 카드를 활성으로 (마지막 카드의 스냅 위치는 max 스크롤보다 클 수 있음)
+    if (maxScroll > 0 && track.scrollLeft >= maxScroll - 2) {
+      index = cards.length - 1;
+    }
+    setActiveIndex(Math.max(0, Math.min(index, cards.length - 1)));
+  }, []);
+
+  // 인기 목록 개수가 바뀌면 활성 위치 보정
+  useEffect(() => {
+    if (!isMobile) return;
+    handleTrackScroll();
+  }, [isMobile, items.length, handleTrackScroll]);
+
+  const handleDotClick = (index) => {
+    const track = trackRef.current;
+    const card = track?.children?.[index];
+    if (!track || !card) return;
+
+    track.scrollTo({
+      left: Math.max(card.offsetLeft - 20, 0),
+      behavior: "smooth",
+    });
+  };
+
   // 트렌딩 비어있으면 아예 렌더 안 함
   if (items.length === 0) return null;
+
+  if (isMobile) {
+    return (
+      <S.MobileTrendingSection>
+        <S.MobileSectionTitle>인기 요리</S.MobileSectionTitle>
+
+        <S.MobileTrendingTrack ref={trackRef} onScroll={handleTrackScroll}>
+          {items.map((item) => (
+            <PostCard
+              key={item.id}
+              item={item}
+              allItems={items}
+              variant="mobile-trending"
+              meNickname={meNickname}
+              onClick={() => handleCardClick(item)}
+              onLikeToggle={onLikeToggle}
+            />
+          ))}
+        </S.MobileTrendingTrack>
+
+        {items.length > 1 && (
+          <S.MobileDots>
+            {items.map((item, index) => (
+              <S.MobileDot
+                key={item.id}
+                type="button"
+                aria-label={`${index + 1}번째 인기 요리`}
+                $active={index === activeIndex}
+                onClick={() => handleDotClick(index)}
+              />
+            ))}
+          </S.MobileDots>
+        )}
+      </S.MobileTrendingSection>
+    );
+  }
 
   return (
     <S.CarouselSection>
