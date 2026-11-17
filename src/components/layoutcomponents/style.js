@@ -17,6 +17,17 @@ export const FloatingWrapper = styled.div`
   right: 32px;
   bottom: 32px;
   z-index: 1000;
+
+  /* 모바일 하단 네비와 겹칠 때만 페이지에서 offset 전달 (미전달 시 변화 없음) */
+  ${({ $mobileBottom }) =>
+    $mobileBottom !== undefined &&
+    css`
+      @media (max-width: 768px) {
+        bottom: ${typeof $mobileBottom === "number"
+          ? `${$mobileBottom}px`
+          : $mobileBottom};
+      }
+    `}
 `;
 
 export const ScrollButton = styled.button`

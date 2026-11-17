@@ -11,6 +11,7 @@ import * as S from "./style";
 import { CommunityHeader } from "../../components/communitycomponents/CommunityHeader";
 import MyRecipeGrid from "../../components/myrecipecomponents/MyRecipeGrid";
 import SortTab from "../../components/myrecipecomponents/SortTab";
+import MyRecipeMobileToolbar from "../../components/myrecipecomponents/MyRecipeMobileToolbar";
 import Pagination from "../../components/layoutcomponents/pagination/Pagination";
 import FloatingActions from "../../components/layoutcomponents/FloatingActions";
 import MyRecipeEmpty from "../../components/myrecipecomponents/MyRecipeEmpty";
@@ -254,20 +255,42 @@ const MyRecipe = () => {
 
   return (
     <S.Page>
+      {/* 모바일(≤768px)에서 공통 헤더 검색창/푸터 숨김 (이 페이지에서만 적용) */}
+      <S.MyRecipeMobileLayoutStyle />
+
       {/* FloatingActions 스크롤 타겟 */}
       <div id="community-top" />
 
       <S.Container $header>
-        <CommunityHeader
-          title="저장한 레시피"
-          placeholder="요리명, 재료 검색..."
-          showSort={true}
-          sortOptions={MYRECIPE_SORT_OPTIONS}
-          defaultSortKey={sortKey}
-          onSortChange={(opt) => setSortKey(opt.key)}
-          onSearch={({ keyword: k }) => setKeyword(k)}
-          onKeywordChange={setKeyword}
-        />
+        {/* 데스크톱(>768px): 기존 헤더 그대로 */}
+        <S.DesktopOnly>
+          <CommunityHeader
+            /* 모바일 툴바에서 정렬이 바뀌어도 라벨이 일치하도록 sortKey 변경 시 재마운트 */
+            key={sortKey}
+            title="저장한 레시피"
+            placeholder="요리명, 재료 검색..."
+            showSort={true}
+            sortOptions={MYRECIPE_SORT_OPTIONS}
+            defaultSortKey={sortKey}
+            keyword={keyword} // 모바일/데스크톱 검색어 단일 state 공유
+            onSortChange={(opt) => setSortKey(opt.key)}
+            onSearch={({ keyword: k }) => setKeyword(k)}
+            onKeywordChange={setKeyword}
+          />
+        </S.DesktopOnly>
+
+        {/* 모바일(≤768px): 전체(N) + 검색 + 정렬 아이콘 */}
+        <S.MobileOnly>
+          <MyRecipeMobileToolbar
+            showTotal={isLoggedIn && !isLoadingSavedList}
+            totalCount={savedList.length}
+            keyword={keyword}
+            onKeywordChange={setKeyword}
+            sortOptions={MYRECIPE_SORT_OPTIONS}
+            sortKey={sortKey}
+            onSortChange={setSortKey}
+          />
+        </S.MobileOnly>
       </S.Container>
 
       <S.FullDivider />
@@ -335,7 +358,12 @@ const MyRecipe = () => {
         }}
       />
 
-      <FloatingActions targetId="community-top" />
+      {/* 모바일: 하단 고정 네비(68px) 위로 올려 겹침 방지 */}
+      <FloatingActions
+        targetId="community-top"
+        mobileBottomOffset="calc(68px + env(safe-area-inset-bottom) + 16px)"
+        mobileShowAfter={100}
+      />
     </S.Page>
   );
 };

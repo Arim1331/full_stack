@@ -1,6 +1,25 @@
-import { styled } from "styled-components";
+import { styled, createGlobalStyle } from "styled-components";
 import { FONT_STYLE } from "../../styles/common";
 import { keyframes } from "framer-motion";
+import {
+  HeaderOuter,
+  FooterOuter,
+} from "../../components/layoutcomponents/style";
+
+/* ===========================
+   모바일(≤768px) 공통 헤더/푸터 숨김 — 마이레시피 전용
+   - createGlobalStyle 은 이 페이지가 마운트된 동안만 적용됨
+     (다른 페이지로 이동하면 자동 제거 → 다른 페이지 영향 없음)
+   - 컴포넌트는 그대로 마운트(CSS만 숨김): Header의 인증 확인,
+     하단 네비(MobileBottomNav), 프로필 팝업은 정상 동작
+=========================== */
+export const MyRecipeMobileLayoutStyle = createGlobalStyle`
+  @media (max-width: 768px) {
+    ${HeaderOuter}, ${FooterOuter} {
+      display: none;
+    }
+  }
+`;
 
 /* ===========================
    Layout (CommunityMain 컨셉과 동일)
@@ -24,10 +43,29 @@ export const Container = styled.div`
     padding: 24px 20px 80px;
   }
   
-  /* 모바일 */
-  @media (max-width: 520px) {
-    padding: ${({ $header }) => 
-      $header ? "8px 20px 0" : "20px 20px 40px"};
+  /* 모바일 (공통 헤더/하단 네비와 동일한 768px 기준)
+     목록 영역은 하단 고정 네비(68px)에 가려지지 않도록 하단 여백 확보 */
+  @media (max-width: 768px) {
+    padding: ${({ $header }) =>
+      $header
+        ? "8px 20px 0"
+        : "12px 20px calc(68px + env(safe-area-inset-bottom) + 24px)"};
+  }
+`;
+
+/* 데스크톱 전용 영역: ≤768px 에서 숨김 */
+export const DesktopOnly = styled.div`
+  @media (max-width: 768px) {
+    display: none;
+  }
+`;
+
+/* 모바일 전용 영역: >768px 에서 숨김 */
+export const MobileOnly = styled.div`
+  display: none;
+
+  @media (max-width: 768px) {
+    display: block;
   }
 `;
 
@@ -37,8 +75,9 @@ export const FullDivider = styled.div`
   margin: 30px 0 0;
   background-color: ${({ theme }) => theme.PALLETE.gray[100]};
 
-  @media (max-width: 520px) {
-    margin-top: 8px;
+  /* 모바일에서는 툴바 하단 라인이 구분선 역할 */
+  @media (max-width: 768px) {
+    display: none;
   }
 `;
 
@@ -92,7 +131,7 @@ export const SortRow = styled.div`
   margin: 0;
 
   /* 모바일에선 최신순 | 조리 빠른순 | 난이도 낮은순 사라짐 */
-  @media (max-width: 520px) {
+  @media (max-width: 768px) {
     display: none;
   }
 `;
