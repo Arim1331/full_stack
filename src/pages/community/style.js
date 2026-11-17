@@ -1,4 +1,8 @@
-import { css, styled } from "styled-components";
+import { css, styled, createGlobalStyle } from "styled-components";
+import {
+  HeaderOuter,
+  FooterOuter,
+} from "../../components/layoutcomponents/style";
 import { flexBetweenRow, flexCenter } from "../../styles/common";
 import { FONT_STYLE } from "../../styles/common";
 import { keyframes } from "styled-components";
@@ -32,6 +36,14 @@ export const Container = styled.div`
 
   @media (max-width: 520px) {
     padding: 16px 20px 24px;
+  }
+
+  /* 모바일(768px 이하): 하단 고정 네비(68px)에 가려지지 않도록 여백 확보 */
+  @media (max-width: 768px) {
+    padding: ${({ $header }) =>
+      $header
+        ? "16px 20px 0"
+        : "8px 20px calc(68px + env(safe-area-inset-bottom) + 24px)"};
   }
 `;
 
@@ -258,6 +270,11 @@ export const FullDivider = styled.div`
 
   @media (max-width: 520px) {
     margin-top: 12px;
+  }
+
+  /* 모바일에서는 구분선 숨김 */
+  @media (max-width: 768px) {
+    display: none;
   }
 `;
 
@@ -638,6 +655,10 @@ export const SectionDivider = styled.div`
   margin: 32px 0 0;
 
   background-color: ${({ theme }) => theme.PALLETE.gray[200]};
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 
 // ** FeedGrid 부분
@@ -767,4 +788,257 @@ export const EmptyButton = styled.button`
   &:active {
     opacity: 1;
   }
+`;
+
+/* =====================================================
+   모바일(≤768px) 전용 스타일 — 커뮤니티 메인
+   (데스크톱 스타일은 위 기존 정의 그대로 유지)
+===================================================== */
+
+/* 커뮤니티 모바일에서 공통 헤더/푸터 숨김.
+   createGlobalStyle 은 이 페이지가 마운트된 동안에만 적용됨(다른 페이지 영향 없음).
+   컴포넌트는 그대로 마운트되므로 인증 확인, 하단 네비, 프로필 팝업은 유지됨 */
+export const CommunityMobileLayoutStyle = createGlobalStyle`
+  @media (max-width: 768px) {
+    ${HeaderOuter}, ${FooterOuter} {
+      display: none;
+    }
+  }
+`;
+
+// 상단 검색창
+export const MobileSearchForm = styled.form`
+  width: 100%;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: ${({ theme }) => theme.PALLETE.gray[70]};
+
+  &:focus-within {
+    border-color: ${({ theme }) => theme.PALLETE.primary.main};
+    background: ${({ theme }) => theme.PALLETE.background.white};
+  }
+
+  ${({ $error, theme }) =>
+    $error &&
+    css`
+      animation: ${shake} 0.35s ease;
+      border-color: ${theme.PALLETE.error};
+      background: ${theme.PALLETE.background.white};
+    `}
+`;
+
+export const MobileSearchIcon = styled.img`
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+`;
+
+export const MobileSearchInput = styled.input`
+  ${FONT_STYLE.PRETENDARD.H7_REGULAR}; /* 16px: iOS 확대 방지 */
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+
+  &::placeholder {
+    color: ${({ theme }) => theme.PALLETE.gray[800]};
+  }
+`;
+
+// 섹션 제목
+export const MobileSectionTitle = styled.h2`
+  ${FONT_STYLE.PRETENDARD.H5_REGULAR};
+  font-weight: 700;
+  margin: 0;
+  color: ${({ theme }) => theme.PALLETE.mainblack};
+`;
+
+// 인기 요리 섹션
+export const MobileTrendingSection = styled.section`
+  width: 100%;
+  margin-top: 28px;
+`;
+
+/* 가로 스와이프 트랙 (scroll-snap). 좌우 20px 컨테이너 패딩을 넘어 화면 끝까지 노출 */
+export const MobileTrendingTrack = styled.div`
+  display: flex;
+  gap: 12px;
+  position: relative; /* 카드 offsetLeft 기준 */
+  margin: 16px -20px 0;
+  padding: 4px 20px 14px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: 20px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
+export const MobileDots = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+`;
+
+export const MobileDot = styled.button`
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background: ${({ theme, $active }) =>
+    $active ? theme.PALLETE.primary.main : theme.PALLETE.gray[200]};
+  transition: background 0.2s ease;
+`;
+
+// 이웃들의 요리 이야기 헤더 (제목 + 정렬)
+export const MobileFeedHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 32px 0 14px;
+`;
+
+// 모바일 정렬 탭 (최신순 | 인기순)
+export const MobileSortTabWrap = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+`;
+
+export const MobileSortTabButton = styled.button`
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+
+  ${FONT_STYLE.PRETENDARD.H7_REGULAR};
+  color: ${({ theme, $active }) =>
+    $active ? theme.PALLETE.primary.main : theme.PALLETE.gray[700]};
+  font-weight: ${({ $active }) => ($active ? 700 : 400)};
+  transition: color 0.15s ease;
+
+  /* 구분자 | */
+  &::after {
+    content: ${({ $isLast }) => ($isLast ? "''" : "'|'")};
+    margin-left: 6px;
+    margin-right: 4px;
+    color: ${({ theme }) => theme.PALLETE.gray[300]};
+    font-weight: 400;
+  }
+`;
+
+// 피드 세로 리스트
+export const MobileFeedList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+/* ---------- 모바일 카드 공통 ---------- */
+const mobileCardBase = css`
+  display: flex;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  border-radius: 14px;
+  background: ${({ theme }) => theme.PALLETE.background.white};
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+`;
+
+// 인기 카드 (세로형)
+export const MobileTrendCard = styled.button`
+  ${mobileCardBase};
+  flex: 0 0 60%;
+  flex-direction: column;
+  scroll-snap-align: start;
+`;
+
+// 피드 카드 (가로형)
+export const MobileListCard = styled.button`
+  ${mobileCardBase};
+  width: 100%;
+  align-items: stretch;
+  gap: 12px;
+  padding: 10px;
+  box-sizing: border-box;
+`;
+
+export const MobileTrendImg = styled.img`
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  display: block;
+`;
+
+export const MobileListImg = styled.img`
+  width: 96px;
+  height: 84px;
+  flex: 0 0 auto;
+  object-fit: cover;
+  border-radius: 10px;
+  display: block;
+`;
+
+export const MobileTrendBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px;
+`;
+
+export const MobileListBody = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+`;
+
+export const MobileTitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+`;
+
+export const MobileCardTitle = styled.p`
+  ${FONT_STYLE.PRETENDARD.H7_REGULAR};
+  font-weight: ${({ theme }) => theme.FONT_WEIGHT.PRETENDARD.MEDIUM};
+  margin: 0;
+  min-width: 0;
+  color: ${({ theme }) => theme.PALLETE.mainblack};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+export const MobileNickname = styled.span`
+  ${FONT_STYLE.PRETENDARD.H8_REGULAR};
+  font-weight: ${({ theme }) => theme.FONT_WEIGHT.PRETENDARD.REGULAR};
+  min-width: 0;
+  color: ${({ theme }) => theme.PALLETE.mainblack};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;

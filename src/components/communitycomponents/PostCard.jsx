@@ -111,6 +111,7 @@ const PostCard = ({
   meNickname,
   allItems = [],
   onLikeToggle,
+  variant, // (선택) "mobile-trending" | "mobile-list". 미지정 시 기존 카드 그대로
 }) => {
   const liked = item?.liked ?? false;
   console.log("PostCard liked", item.id, item.liked, liked);
@@ -232,6 +233,42 @@ const PostCard = ({
     const topIds = new Set(sorted.slice(0, POPULAR_TOP_N).map((x) => x.id));
     return topIds.has(item?.id);
   }, [allItems, item?.id]);
+
+  // ===== 모바일 전용 카드 (본문/재료/배지 미표시) =====
+  if (variant === "mobile-trending" || variant === "mobile-list") {
+    const isTrending = variant === "mobile-trending";
+    const CardTag = isTrending ? S.MobileTrendCard : S.MobileListCard;
+
+    const likeArea = (
+      <S.CardLikeArea onClick={handleLikeToggle}>
+        <S.HeartIcon $liked={liked} />
+        <S.LikeCount>{likeCount}</S.LikeCount>
+      </S.CardLikeArea>
+    );
+
+    return isTrending ? (
+      <CardTag type="button" onClick={onClick}>
+        <S.MobileTrendImg src={recipeImage} alt={`${recipeName} 이미지`} />
+        <S.MobileTrendBody>
+          <S.MobileTitleRow>
+            <S.MobileCardTitle>{recipeName}</S.MobileCardTitle>
+            {likeArea}
+          </S.MobileTitleRow>
+        </S.MobileTrendBody>
+      </CardTag>
+    ) : (
+      <CardTag type="button" onClick={onClick}>
+        <S.MobileListImg src={recipeImage} alt={`${recipeName} 이미지`} />
+        <S.MobileListBody>
+          <S.MobileTitleRow>
+            <S.MobileCardTitle>{recipeName}</S.MobileCardTitle>
+            {likeArea}
+          </S.MobileTitleRow>
+          <S.MobileNickname>{nickname}</S.MobileNickname>
+        </S.MobileListBody>
+      </CardTag>
+    );
+  }
 
   return (
     <S.CarouselCard type="button" $w={w} $mine={isMine} onClick={onClick}>
